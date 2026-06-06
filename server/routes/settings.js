@@ -4,49 +4,56 @@ const supabase  = require("../db");
 const adminAuth = require("../middleware/adminAuth");
 
 const DEFAULT_SETTINGS = {
-  widget_enabled:   true,
-  widget_icon:      "bubble",
-  color_primary:    "#d4af37",
-  color_bg:         "#f5f0eb",
-  color_user_bubble:"#1a1a1a",
-  color_bot_bubble: "#ffffff",
-  color_send_btn:   "#c9a84c",
-  color_header_bg:  "#1a1a1a",
+  widget_enabled:    true,
+  widget_icon:       "bubble",
+  color_primary:     "#d4af37",
+  color_bg:          "#f5f0eb",
+  color_user_bubble: "#1a1a1a",
+  color_bot_bubble:  "#ffffff",
+  color_send_btn:    "#c9a84c",
+  color_header_bg:   "#1a1a1a",
 };
 
-// GET /api/settings  — public (client + widget read colors & toggle)
-// NOTE: openai_api_key is NEVER returned to the public
+// Mask an API key: show first 10 chars + **** + last 4 chars
+function maskKey(key) {
+  if (!key || key.length < 16) return "sk-****";
+  return key.slice(0, 10) + "…" + key.slice(-4);
+}
+
+// GET /api/settings — public (client + widget: colors & toggle only, NO key)
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("settings").select("*").eq("id", "global").single();
     if (error) throw error;
-
-    const { openai_api_key: _hidden, ...safe } = data;
+    const { openai_api_key: _omit, ...safe } = data;
     return res.json({ settings: safe });
   } catch {
     return res.json({ settings: DEFAULT_SETTINGS });
   }
 });
 
-// GET /api/settings/admin  — admin only (includes key presence flag)
+// GET /api/settings/admin — admin only (masked key preview + all settings)
 router.get("/admin", adminAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("settings").select("*").eq("id", "global").single();
     if (error) throw error;
 
-    // Don't send the actual key — just whether it's set
     const { openai_api_key, ...rest } = data;
     return res.json({
       settings: {
         ...rest,
-        openai_key_set:    !!openai_api_key,
-        openai_key_source: openai_api_key
+        openai_key_set:     !!openai_api_key,
+        openai_key_masked:  openai_api_key ? maskKey(openai_api_key) : null,
+        openai_key_source:  openai_api_key
           ? "database"
           : process.env.OPENAI_API_KEY
             ? "environment"
             : "none",
+        env_key_masked: process.env.OPENAI_API_KEY
+          ? maskKey(process.env.OPENAI_API_KEY)
+          : null,
       },
     });
   } catch {
@@ -54,13 +61,17 @@ router.get("/admin", adminAuth, async (req, res) => {
       settings: {
         ...DEFAULT_SETTINGS,
         openai_key_set:    !!process.env.OPENAI_API_KEY,
+        openai_key_masked: null,
         openai_key_source: process.env.OPENAI_API_KEY ? "environment" : "none",
+        env_key_masked:    process.env.OPENAI_API_KEY
+          ? maskKey(process.env.OPENAI_API_KEY)
+          : null,
       },
     });
   }
 });
 
-// PUT /api/settings  — admin only
+// PUT /api/settings — admin only
 router.put("/", adminAuth, async (req, res) => {
   try {
     const {
@@ -70,25 +81,24 @@ router.put("/", adminAuth, async (req, res) => {
       color_bot_bubble, color_send_btn, color_header_bg,
     } = req.body;
 
+    // widget_enabled MUST be sent explicitly — never default to true
     const patch = {
-      widget_enabled:    widget_enabled   !== undefined ? Boolean(widget_enabled) : undefined,
-      widget_icon:       widget_icon       || undefined,
-      color_primary:     color_primary     || undefined,
-      color_bg:          color_bg          || undefined,
-      color_user_bubble: color_user_bubble || undefined,
-      color_bot_bubble:  color_bot_bubble  || undefined,
-      color_send_btn:    color_send_btn    || undefined,
-      color_header_bg:   color_header_bg   || undefined,
-      updated_at:        new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
-    // Only save key if a non-empty value is provided
-    if (openai_api_key && openai_api_key.trim()) {
+    if (widget_enabled !== undefined) patch.widget_enabled = Boolean(widget_enabled);
+    if (widget_icon)       patch.widget_icon       = widget_icon;
+    if (color_primary)     patch.color_primary     = color_primary;
+    if (color_bg)          patch.color_bg          = color_bg;
+    if (color_user_bubble) patch.color_user_bubble = color_user_bubble;
+    if (color_bot_bubble)  patch.color_bot_bubble  = color_bot_bubble;
+    if (color_send_btn)    patch.color_send_btn    = color_send_btn;
+    if (color_header_bg)   patch.color_header_bg   = color_header_bg;
+
+    // Save key only if non-empty and looks like a real key
+    if (openai_api_key && openai_api_key.trim().length > 10) {
       patch.openai_api_key = openai_api_key.trim();
     }
-
-    // Remove undefined keys
-    Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
 
     const { data, error } = await supabase
       .from("settings")
@@ -97,14 +107,28 @@ router.put("/", adminAuth, async (req, res) => {
       .single();
     if (error) throw error;
 
-    const { openai_api_key: _hidden, ...safe } = data;
-    return res.json({ settings: safe, success: true });
+    // Return masked key info — never raw key
+    const { openai_api_key: savedKey, ...rest } = data;
+    return res.json({
+      settings: {
+        ...rest,
+        openai_key_set:    !!savedKey,
+        openai_key_masked: savedKey ? maskKey(savedKey) : null,
+        openai_key_source: savedKey
+          ? "database"
+          : process.env.OPENAI_API_KEY ? "environment" : "none",
+        env_key_masked: process.env.OPENAI_API_KEY
+          ? maskKey(process.env.OPENAI_API_KEY)
+          : null,
+      },
+      success: true,
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE openai key only
+// DELETE /api/settings/openai-key — remove stored key from DB
 router.delete("/openai-key", adminAuth, async (req, res) => {
   try {
     await supabase.from("settings")
