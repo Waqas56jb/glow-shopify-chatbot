@@ -24,6 +24,16 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", db: "supabase", timestamp: new Date().toISOString() });
 });
 
+// ── Debug (env var presence check — no values exposed) ───────────────────
+app.get("/debug", (_req, res) => {
+  res.json({
+    OPENAI_API_KEY:      !!process.env.OPENAI_API_KEY,
+    SUPABASE_URL:        !!process.env.SUPABASE_URL,
+    SUPABASE_SECRET_KEY: !!process.env.SUPABASE_SECRET_KEY,
+    NODE_ENV:            process.env.NODE_ENV || "not set",
+  });
+});
+
 // ── 404 ───────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: "Route not found" }));
 

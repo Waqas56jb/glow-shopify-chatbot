@@ -14,15 +14,24 @@ const MEMORY_LIMIT = 20;
 
 // POST /api/chat
 router.post("/", async (req, res) => {
+  const { message, session_id, customer_name, customer_email } = req.body;
+
+  if (!message || !session_id) {
+    return res.status(400).json({ error: "message and session_id are required" });
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ error: "OPENAI_API_KEY is not configured on the server." });
+  }
+
+  // ── DB operations (non-fatal — chatbot works even if DB is down) ──────
+  let convId     = null;
+  let prevCount  = 0;
+  let history    = [];
+  let dbOk       = false;
+
   try {
-    const { message, session_id, customer_name, customer_email } = req.body;
-
-    if (!message || !session_id) {
-      return res.status(400).json({ error: "message and session_id are required" });
-    }
-
-    // 1. Upsert conversation
-    let convId, prevCount = 0;
+    // Upsert conversation
     const { data: existing } = await supabase
       .from("conversations")
       .select("id, message_count")
@@ -33,62 +42,72 @@ router.post("/", async (req, res) => {
       convId    = existing.id;
       prevCount = existing.message_count || 0;
     } else {
-      const { data: created, error: cErr } = await supabase
+      const { data: created } = await supabase
         .from("conversations")
         .insert({ session_id, customer_name: customer_name || null, customer_email: customer_email || null })
         .select("id")
         .single();
-      if (cErr) throw cErr;
-      convId = created.id;
+      if (created) convId = created.id;
     }
 
-    // 2. Fetch last MEMORY_LIMIT messages
-    const { data: history } = await supabase
+    // Fetch history
+    const { data: hist } = await supabase
       .from("messages")
       .select("role, content")
       .eq("session_id", session_id)
       .order("created_at", { ascending: true })
       .limit(MEMORY_LIMIT);
 
-    // 3. Fetch live products from DB (cached 5 min)
-    const products = await getProducts();
+    history = (hist || []).map((m) => ({ role: m.role, content: m.content }));
+    dbOk = true;
+  } catch (dbErr) {
+    console.warn("⚠️  DB unavailable — running without memory:", dbErr.message);
+  }
 
-    // 4. Build prompt + context
-    const systemPrompt = buildSystemPrompt(products);
+  // ── Fetch products (non-fatal) ────────────────────────────────────────
+  let products = [];
+  try {
+    products = await getProducts();
+  } catch {
+    // proceed without product catalog
+  }
+
+  // ── Build prompt + call OpenAI ────────────────────────────────────────
+  try {
+    const systemPrompt    = buildSystemPrompt(products);
     const contextMessages = [
-      { role: "system",  content: systemPrompt },
-      ...(history || []).map((m) => ({ role: m.role, content: m.content })),
-      { role: "user",    content: message },
+      { role: "system", content: systemPrompt },
+      ...history,
+      { role: "user",   content: message },
     ];
 
-    // 5. Call OpenAI
     const completion = await openai.chat.completions.create({
       model: MODEL, messages: contextMessages, max_tokens: MAX_TOKENS, temperature: TEMPERATURE,
     });
+
     const reply = completion.choices[0]?.message?.content || "";
 
-    // 6. Persist messages + update conversation
-    if (convId) {
-      await supabase.from("messages").insert([
+    // ── Persist messages async (fire-and-forget if DB is ok) ─────────────
+    if (dbOk && convId) {
+      supabase.from("messages").insert([
         { conversation_id: convId, session_id, role: "user",      content: message },
         { conversation_id: convId, session_id, role: "assistant", content: reply   },
-      ]);
-
-      const updatePayload = {
-        message_count: prevCount + 2,
-        last_message:  message.substring(0, 120),
-        updated_at:    new Date().toISOString(),
-      };
-      if (customer_name)  updatePayload.customer_name  = customer_name;
-      if (customer_email) updatePayload.customer_email = customer_email;
-
-      await supabase.from("conversations").update(updatePayload).eq("id", convId);
+      ]).then(() =>
+        supabase.from("conversations").update({
+          message_count: prevCount + 2,
+          last_message:  message.substring(0, 120),
+          updated_at:    new Date().toISOString(),
+          ...(customer_name  ? { customer_name }  : {}),
+          ...(customer_email ? { customer_email } : {}),
+        }).eq("id", convId)
+      ).catch((e) => console.warn("DB write failed:", e.message));
     }
 
-    res.json({ reply, session_id });
-  } catch (err) {
-    console.error("Chat error:", err.message);
-    res.status(500).json({ error: err.message });
+    return res.json({ reply, session_id });
+
+  } catch (aiErr) {
+    console.error("OpenAI error:", aiErr.message);
+    return res.status(500).json({ error: aiErr.message });
   }
 });
 
