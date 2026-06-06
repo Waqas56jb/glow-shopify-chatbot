@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { quickReplies, welcomeScreen, storeInfo } from "../data";
 import { useChat } from "../hooks/useChat";
@@ -30,15 +30,42 @@ function BotAvatar() {
   );
 }
 
+function TypingDots() {
+  return (
+    <div className="typing-dots">
+      <span /><span /><span />
+    </div>
+  );
+}
+
 export default function ChatWidget() {
   const [input, setInput] = useState("");
   const { messages, loading, error, isStarted, startChat, sendMessage } = useChat();
+  const scrollRef = useRef(null);
+  const inputRef = useRef(null);
+
+  /* Auto-scroll to bottom on new messages */
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages, loading]);
+
+  /* iOS: scroll input into view when keyboard opens */
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      }
+    }, 300);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
     sendMessage(input.trim());
     setInput("");
+    inputRef.current?.focus();
   };
 
   const handleQuickReply = (text) => {
@@ -46,11 +73,11 @@ export default function ChatWidget() {
     sendMessage(text);
   };
 
+  /* ── Welcome screen ── */
   if (!isStarted) {
     return (
       <div className="chat-widget chat-widget-welcome">
         <ChatHeader />
-
         <div className="welcome-body">
           <div className="welcome-emblem">
             <div className="welcome-emblem-ring" />
@@ -58,10 +85,8 @@ export default function ChatWidget() {
               <span>G</span>
             </div>
           </div>
-
           <h2 className="welcome-title">{welcomeScreen.title}</h2>
           <p className="welcome-subtitle">{welcomeScreen.subtitle}</p>
-
           <button type="button" className="start-btn" onClick={startChat}>
             <span className="start-btn-icon">✦</span>
             {welcomeScreen.startButton}
@@ -71,6 +96,7 @@ export default function ChatWidget() {
     );
   }
 
+  /* ── Active chat ── */
   return (
     <div className="chat-widget chat-widget-active">
       <ChatHeader />
@@ -98,7 +124,9 @@ export default function ChatWidget() {
           {loading && (
             <div className="chat-message-row assistant">
               <BotAvatar />
-              <div className="chat-bubble assistant typing">Typing...</div>
+              <div className="chat-bubble assistant typing">
+                <TypingDots />
+              </div>
             </div>
           )}
 
@@ -108,6 +136,8 @@ export default function ChatWidget() {
               <div className="chat-bubble error">{error}</div>
             </div>
           )}
+
+          <div ref={scrollRef} className="scroll-anchor" />
         </div>
 
         {messages.length === 1 && messages[0].role === "assistant" && (
@@ -131,15 +161,25 @@ export default function ChatWidget() {
       <footer className="chat-footer">
         <form className="chat-input-form" onSubmit={handleSubmit}>
           <input
+            ref={inputRef}
             type="text"
             className="chat-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onFocus={handleInputFocus}
             placeholder="Write your message..."
             disabled={loading}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="sentences"
           />
-          <button type="submit" className="chat-send-btn" disabled={loading || !input.trim()}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <button
+            type="submit"
+            className="chat-send-btn"
+            disabled={loading || !input.trim()}
+            aria-label="Send message"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 19V5M5 12l7-7 7 7" />
             </svg>
           </button>
