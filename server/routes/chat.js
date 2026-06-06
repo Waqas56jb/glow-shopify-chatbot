@@ -10,15 +10,16 @@ const MAX_TOKENS   = 400;
 const TEMPERATURE  = 0.7;
 const MEMORY_LIMIT = 6;
 
-// Resolve OpenAI key: env var → DB fallback
-async function getOpenAIKey() {
-  if (process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY;
+// Resolve OpenAI key + chatbot_tone from settings in one query
+async function getSettings() {
   try {
     const { data } = await supabase
-      .from("settings").select("openai_api_key").eq("id", "global").single();
-    if (data?.openai_api_key) return data.openai_api_key;
-  } catch {}
-  return null;
+      .from("settings").select("openai_api_key, chatbot_tone").eq("id", "global").single();
+    const apiKey = process.env.OPENAI_API_KEY || data?.openai_api_key || null;
+    return { apiKey, tone: data?.chatbot_tone || "friendly" };
+  } catch {
+    return { apiKey: process.env.OPENAI_API_KEY || null, tone: "friendly" };
+  }
 }
 
 // ── DB context (parallel-fetched, non-fatal) ─────────────────────────────
@@ -76,7 +77,7 @@ router.post("/", async (req, res) => {
   if (!message || !session_id) {
     return res.status(400).json({ error: "message and session_id are required" });
   }
-  const apiKey = await getOpenAIKey();
+  const { apiKey, tone } = await getSettings();
   if (!apiKey) {
     return res.status(500).json({ error: "OpenAI API key not configured. Set it in Settings or Vercel env vars." });
   }
@@ -89,7 +90,7 @@ router.post("/", async (req, res) => {
   ]);
 
   const contextMessages = [
-    { role: "system", content: buildSystemPrompt(products) },
+    { role: "system", content: buildSystemPrompt(products, tone) },
     ...history,
     { role: "user", content: message },
   ];

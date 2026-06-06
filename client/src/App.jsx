@@ -12,10 +12,13 @@ function applyColors(settings) {
   if (settings.color_header_bg)   root.style.setProperty("--chat-header-bg",   settings.color_header_bg);
 }
 
+const DEFAULT_FIRST_MESSAGE = "Hey! 👋 Welcome to GlowUp Goods — your personal stylist is here! What are you shopping for today? ✨";
+
 export default function App() {
   const [ready,         setReady]         = useState(false);
   const [widgetEnabled, setWidgetEnabled] = useState(true);
   const [widgetIcon,    setWidgetIcon]    = useState("bubble");
+  const [firstMessage,  setFirstMessage]  = useState(DEFAULT_FIRST_MESSAGE);
 
   useEffect(() => {
     fetch(`${chatbotConfig.baseUrl}/api/settings`)
@@ -25,6 +28,7 @@ export default function App() {
           applyColors(settings);
           setWidgetEnabled(settings.widget_enabled !== false);
           setWidgetIcon(settings.widget_icon || "bubble");
+          setFirstMessage(settings.first_message || DEFAULT_FIRST_MESSAGE);
         }
       })
       .catch(() => {}) // use defaults on failure
@@ -36,7 +40,7 @@ export default function App() {
 
   return (
     <main className="app">
-      <ChatWidget widgetIcon={widgetIcon} />
+      <ChatWidget widgetIcon={widgetIcon} firstMessage={firstMessage} />
     </main>
   );
 }

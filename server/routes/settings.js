@@ -12,7 +12,11 @@ const DEFAULT_SETTINGS = {
   color_bot_bubble:  "#ffffff",
   color_send_btn:    "#c9a84c",
   color_header_bg:   "#1a1a1a",
+  first_message:     "Hey! 👋 Welcome to GlowUp Goods — your personal stylist is here! What are you shopping for today? ✨",
+  chatbot_tone:      "friendly",
 };
+
+const VALID_TONES = ["friendly", "professional", "luxury", "bold", "playful"];
 
 // Mask an API key: show first 10 chars + **** + last 4 chars
 function maskKey(key) {
@@ -79,6 +83,7 @@ router.put("/", adminAuth, async (req, res) => {
       widget_enabled, widget_icon,
       color_primary, color_bg, color_user_bubble,
       color_bot_bubble, color_send_btn, color_header_bg,
+      first_message, chatbot_tone,
     } = req.body;
 
     // widget_enabled MUST be sent explicitly — never default to true
@@ -94,6 +99,8 @@ router.put("/", adminAuth, async (req, res) => {
     if (color_bot_bubble)  patch.color_bot_bubble  = color_bot_bubble;
     if (color_send_btn)    patch.color_send_btn    = color_send_btn;
     if (color_header_bg)   patch.color_header_bg   = color_header_bg;
+    if (first_message !== undefined) patch.first_message = first_message.trim().slice(0, 500) || DEFAULT_SETTINGS.first_message;
+    if (chatbot_tone && VALID_TONES.includes(chatbot_tone)) patch.chatbot_tone = chatbot_tone;
 
     // Save key only if non-empty and looks like a real key
     if (openai_api_key && openai_api_key.trim().length > 10) {

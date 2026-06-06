@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { chatbotConfig } from "../config/chatbotConfig";
-import { promoMessage } from "../data";
+import { promoMessage as fallbackPromoMessage } from "../data";
 
 function getOrCreateSessionId() {
   try {
@@ -37,7 +37,9 @@ function typeMessage(text, onChunk, onDone) {
   next();
 }
 
-export function useChat() {
+export function useChat(firstMessage) {
+  const greeting = firstMessage || fallbackPromoMessage;
+
   const [messages,  setMessages]  = useState([]);
   const [isStarted, setIsStarted] = useState(false);
   const [loading,   setLoading]   = useState(false);
@@ -46,7 +48,7 @@ export function useChat() {
   const [sessionId]               = useState(getOrCreateSessionId);
 
   const startChat = () => {
-    setMessages([{ role: "assistant", content: promoMessage }]);
+    setMessages([{ role: "assistant", content: greeting }]);
     setIsStarted(true);
   };
 
@@ -56,7 +58,7 @@ export function useChat() {
 
     const userMsg = { role: "user", content };
     setMessages((prev) => [
-      ...(prev.length === 0 ? [{ role: "assistant", content: promoMessage }] : prev),
+      ...(prev.length === 0 ? [{ role: "assistant", content: greeting }] : prev),
       userMsg,
     ]);
     setLoading(true);

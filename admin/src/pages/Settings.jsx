@@ -69,6 +69,17 @@ const THEMES = [
 const INITIAL_SHOW = 8;
 
 /* ─────────────────────────────────────────────────────────────────────────
+   CHATBOT TONES
+───────────────────────────────────────────────────────────────────────── */
+const TONES = [
+  { id:"friendly",     emoji:"😊", label:"Friendly & Casual",      desc:"Warm, fun, like a stylish best friend texting you" },
+  { id:"professional", emoji:"💼", label:"Professional & Formal",   desc:"Polished, refined, premium boutique experience" },
+  { id:"luxury",       emoji:"👑", label:"Luxury & Elegant",        desc:"Sophisticated, aspirational, high-end stylist" },
+  { id:"bold",         emoji:"⚡", label:"Bold & Energetic",         desc:"Punchy, direct, high-energy trend-setter" },
+  { id:"playful",      emoji:"🎉", label:"Playful & Fun",            desc:"Bubbly, cheerful, makes shopping feel like play" },
+];
+
+/* ─────────────────────────────────────────────────────────────────────────
    MINI PREVIEW component
 ───────────────────────────────────────────────────────────────────────── */
 function ThemePreview({ theme, size = "sm" }) {
@@ -107,11 +118,13 @@ export default function Settings() {
   const [showAll,    setShowAll]    = useState(false);
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
-  const [widgetOn,   setWidgetOn]   = useState(undefined);
-  const [icon,       setIcon]       = useState("bubble");
-  const [openaiKey,  setOpenaiKey]  = useState("");
-  const [showKey,    setShowKey]    = useState(false);
-  const [activeTheme,setActiveTheme]= useState(null); // name of selected preset
+  const [widgetOn,      setWidgetOn]      = useState(undefined);
+  const [icon,          setIcon]          = useState("bubble");
+  const [openaiKey,     setOpenaiKey]     = useState("");
+  const [showKey,       setShowKey]       = useState(false);
+  const [activeTheme,   setActiveTheme]   = useState(null);
+  const [firstMessage,  setFirstMessage]  = useState("Hey! 👋 Welcome to GlowUp Goods — your personal stylist is here! What are you shopping for today? ✨");
+  const [chatbotTone,   setChatbotTone]   = useState("friendly");
   const [colors, setColors] = useState({
     color_primary:    "#d4af37",
     color_bg:         "#f5f0eb",
@@ -128,6 +141,8 @@ export default function Settings() {
         setS(settings);
         setWidgetOn(settings.widget_enabled === true);
         setIcon(settings.widget_icon || "bubble");
+        setFirstMessage(settings.first_message || "Hey! 👋 Welcome to GlowUp Goods — your personal stylist is here! What are you shopping for today? ✨");
+        setChatbotTone(settings.chatbot_tone || "friendly");
         const c = {
           color_primary:     settings.color_primary     || "#d4af37",
           color_bg:          settings.color_bg          || "#f5f0eb",
@@ -159,7 +174,7 @@ export default function Settings() {
     e.preventDefault();
     setSaving(true); setError(""); setSaved(false);
     try {
-      const body = { widget_enabled: widgetOn, widget_icon: icon, ...colors };
+      const body = { widget_enabled: widgetOn, widget_icon: icon, ...colors, first_message: firstMessage, chatbot_tone: chatbotTone };
       if (openaiKey.trim().length > 10) body.openai_api_key = openaiKey.trim();
       const { settings: updated } = await apiFetch("/api/settings", { method:"PUT", body: JSON.stringify(body) });
       setS(updated);
@@ -347,6 +362,49 @@ export default function Settings() {
               <span className={styles.iconLabel}>{label}</span>
             </button>
           ))}
+        </div>
+      </Section>
+
+      {/* ── Chatbot Behavior ── */}
+      <Section title="🧠 Chatbot Behavior">
+
+        {/* First Message */}
+        <div className={styles.behaviorRow}>
+          <div className={styles.behaviorLabel}>
+            <span className={styles.behaviorLabelTitle}>Welcome Message</span>
+            <span className={styles.behaviorLabelSub}>First message customers see when they open the chat</span>
+          </div>
+          <div className={styles.behaviorControl}>
+            <textarea
+              className={styles.textarea}
+              rows={3}
+              maxLength={500}
+              value={firstMessage}
+              onChange={(e) => { setFirstMessage(e.target.value); setSaved(false); }}
+              placeholder="Hey! 👋 Welcome to GlowUp Goods…"
+            />
+            <span className={styles.charCount}>{firstMessage.length}/500</span>
+          </div>
+        </div>
+
+        {/* Tone Selector */}
+        <div className={styles.behaviorRow} style={{ borderBottom: "none" }}>
+          <div className={styles.behaviorLabel}>
+            <span className={styles.behaviorLabelTitle}>Chatbot Tone</span>
+            <span className={styles.behaviorLabelSub}>Personality &amp; speaking style for AI responses</span>
+          </div>
+          <div className={styles.toneGrid}>
+            {TONES.map((t) => (
+              <button key={t.id} type="button"
+                className={`${styles.toneBtn} ${chatbotTone === t.id ? styles.toneBtnActive : ""}`}
+                onClick={() => { setChatbotTone(t.id); setSaved(false); }}
+              >
+                <span className={styles.toneEmoji}>{t.emoji}</span>
+                <span className={styles.toneLabel}>{t.label}</span>
+                <span className={styles.toneDesc}>{t.desc}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </Section>
 

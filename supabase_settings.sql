@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS settings (
   color_bot_bubble TEXT      DEFAULT '#ffffff',   -- white
   color_send_btn   TEXT      DEFAULT '#c9a84c',   -- gold button
   color_header_bg  TEXT      DEFAULT '#1a1a1a',   -- dark header
+  first_message    TEXT      DEFAULT 'Hey! 👋 Welcome to GlowUp Goods — your personal stylist is here! What are you shopping for today? ✨',
+  chatbot_tone     TEXT      DEFAULT 'friendly',  -- friendly | professional | luxury | bold | playful
   updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -22,3 +24,7 @@ ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
 INSERT INTO settings (id)
 VALUES ('global')
 ON CONFLICT (id) DO NOTHING;
+
+-- If table already exists, add the new columns (safe to run multiple times)
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS first_message TEXT DEFAULT 'Hey! 👋 Welcome to GlowUp Goods — your personal stylist is here! What are you shopping for today? ✨';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS chatbot_tone  TEXT DEFAULT 'friendly';

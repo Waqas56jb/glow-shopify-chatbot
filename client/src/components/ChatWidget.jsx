@@ -38,9 +38,9 @@ function TypingDots() {
   );
 }
 
-export default function ChatWidget() {
+export default function ChatWidget({ widgetIcon, firstMessage }) {
   const [input, setInput] = useState("");
-  const { messages, loading, typing, error, isStarted, startChat, sendMessage } = useChat();
+  const { messages, loading, typing, error, isStarted, startChat, sendMessage } = useChat(firstMessage);
   const isBusy = loading || typing;
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
