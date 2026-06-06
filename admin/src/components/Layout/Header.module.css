@@ -69,6 +69,18 @@
   user-select: none;
 }
 
+.signOutBtn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+.signOutBtn:hover { color: var(--red); background: rgba(239,68,68,0.08); }
+
 @media (max-width: 768px) {
   .menuBtn { display: flex; }
   .date { display: none; }
