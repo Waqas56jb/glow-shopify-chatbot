@@ -8,11 +8,11 @@ const { getProducts }       = require("../cache/productCache");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const MODEL        = "gpt-4o-mini";
-const MAX_TOKENS   = 500;   // shorter = faster
+const MAX_TOKENS   = 400;   // short = fast
 const TEMPERATURE  = 0.7;
-const MEMORY_LIMIT = 8;     // last 8 messages is enough
+const MEMORY_LIMIT = 6;
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── DB context (parallel-fetched, non-fatal) ─────────────────────────────
 async function fetchDbContext(session_id, customer_name, customer_email) {
   let convId = null, prevCount = 0, history = [], dbOk = false;
   try {
@@ -29,14 +29,18 @@ async function fetchDbContext(session_id, customer_name, customer_email) {
       prevCount = existRes.data.message_count || 0;
     } else {
       const { data: created } = await supabase.from("conversations")
-        .insert({ session_id, customer_name: customer_name || null, customer_email: customer_email || null })
+        .insert({
+          session_id,
+          customer_name:  customer_name  || null,
+          customer_email: customer_email || null,
+        })
         .select("id").single();
       if (created) convId = created.id;
     }
     history = (histRes.data || []).map((m) => ({ role: m.role, content: m.content }));
     dbOk = true;
   } catch (e) {
-    console.warn("⚠️  DB skip:", e.message);
+    console.warn("DB skip:", e.message);
   }
   return { convId, prevCount, history, dbOk };
 }
@@ -56,7 +60,7 @@ function persistAsync(convId, session_id, prevCount, message, reply, customer_na
   ).catch((e) => console.warn("DB write failed:", e.message));
 }
 
-// ── POST /api/chat  (streaming SSE) ─────────────────────────────────────────
+// POST /api/chat
 router.post("/", async (req, res) => {
   const { message, session_id, customer_name, customer_email } = req.body;
 
@@ -67,7 +71,7 @@ router.post("/", async (req, res) => {
     return res.status(500).json({ error: "OPENAI_API_KEY not configured" });
   }
 
-  // Parallel: DB context + product cache
+  // Fetch DB context + product cache in parallel
   const [{ convId, prevCount, history, dbOk }, products] = await Promise.all([
     fetchDbContext(session_id, customer_name, customer_email),
     getProducts().catch(() => []),
@@ -76,45 +80,29 @@ router.post("/", async (req, res) => {
   const contextMessages = [
     { role: "system", content: buildSystemPrompt(products) },
     ...history,
-    { role: "user",   content: message },
+    { role: "user", content: message },
   ];
 
-  // ── SSE headers ────────────────────────────────────────────────────────────
-  res.setHeader("Content-Type",  "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection",    "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no"); // disable Nginx buffering on Vercel
-
-  let fullReply = "";
-
   try {
-    const stream = await openai.chat.completions.create({
-      model: MODEL, messages: contextMessages,
-      max_tokens: MAX_TOKENS, temperature: TEMPERATURE,
-      stream: true,
+    const completion = await openai.chat.completions.create({
+      model:       MODEL,
+      messages:    contextMessages,
+      max_tokens:  MAX_TOKENS,
+      temperature: TEMPERATURE,
     });
 
-    for await (const chunk of stream) {
-      const token = chunk.choices[0]?.delta?.content;
-      if (token) {
-        fullReply += token;
-        res.write(`data: ${JSON.stringify({ token })}\n\n`);
-      }
-    }
+    const reply = completion.choices[0]?.message?.content || "";
 
-    // Signal done + pass session_id
-    res.write(`data: ${JSON.stringify({ done: true, session_id })}\n\n`);
-    res.end();
-
-    // Persist to DB in background
+    // Persist to DB (fire-and-forget)
     if (dbOk && convId) {
-      persistAsync(convId, session_id, prevCount, message, fullReply, customer_name, customer_email);
+      persistAsync(convId, session_id, prevCount, message, reply, customer_name, customer_email);
     }
+
+    return res.json({ reply, session_id });
 
   } catch (err) {
-    console.error("OpenAI stream error:", err.message);
-    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
-    res.end();
+    console.error("OpenAI error:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 });
 

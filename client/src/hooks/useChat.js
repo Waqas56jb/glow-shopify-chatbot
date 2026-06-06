@@ -17,10 +17,31 @@ function getOrCreateSessionId() {
   }
 }
 
+// Simulate typing word-by-word after response arrives
+function typeMessage(text, onChunk, onDone) {
+  const words = text.split(" ");
+  let i = 0;
+  let built = "";
+
+  function next() {
+    if (i >= words.length) {
+      onDone();
+      return;
+    }
+    built += (i === 0 ? "" : " ") + words[i];
+    i++;
+    onChunk(built);
+    // Speed: ~18ms per word (~55 words/sec) — fast but visible
+    setTimeout(next, 18);
+  }
+  next();
+}
+
 export function useChat() {
   const [messages,  setMessages]  = useState([]);
   const [isStarted, setIsStarted] = useState(false);
   const [loading,   setLoading]   = useState(false);
+  const [typing,    setTyping]    = useState(false); // word-by-word animation
   const [error,     setError]     = useState("");
   const [sessionId]               = useState(getOrCreateSessionId);
 
@@ -30,7 +51,7 @@ export function useChat() {
   };
 
   const sendMessage = async (content) => {
-    if (!content.trim()) return;
+    if (!content.trim() || loading || typing) return;
     if (!isStarted) setIsStarted(true);
 
     const userMsg = { role: "user", content };
@@ -41,13 +62,6 @@ export function useChat() {
     setLoading(true);
     setError("");
 
-    // Add empty assistant bubble that we'll stream into
-    const assistantIdx = { current: -1 };
-    setMessages((prev) => {
-      assistantIdx.current = prev.length;
-      return [...prev, { role: "assistant", content: "" }];
-    });
-
     try {
       const response = await fetch(`${chatbotConfig.baseUrl}/api/chat`, {
         method:  "POST",
@@ -55,65 +69,48 @@ export function useChat() {
         body:    JSON.stringify({ message: content, session_id: sessionId }),
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `Server error ${response.status}`);
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `Server error ${response.status}`);
 
-      const reader  = response.body.getReader();
-      const decoder = new TextDecoder();
-      let   buffer  = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop(); // keep incomplete line
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.slice(6).trim();
-          if (!raw) continue;
-
-          let parsed;
-          try { parsed = JSON.parse(raw); } catch { continue; }
-
-          if (parsed.token) {
-            // Append token to the last assistant message
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last    = updated[updated.length - 1];
-              if (last?.role === "assistant") {
-                updated[updated.length - 1] = { ...last, content: last.content + parsed.token };
-              }
-              return updated;
-            });
-          }
-
-          if (parsed.error) throw new Error(parsed.error);
-          if (parsed.done)  break;
-        }
-      }
-    } catch (err) {
-      setError(err.message);
-      // Replace the empty assistant bubble with an error message
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last    = updated[updated.length - 1];
-        if (last?.role === "assistant" && last.content === "") {
-          updated[updated.length - 1] = {
-            role:    "assistant",
-            content: "I'm having a quick moment — please try again in a second! 🙏",
-          };
-        }
-        return updated;
-      });
-    } finally {
       setLoading(false);
+      setTyping(true);
+
+      // Add empty assistant bubble to type into
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      // Animate word-by-word
+      typeMessage(
+        data.reply,
+        (partial) => {
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: partial };
+            return updated;
+          });
+        },
+        () => {
+          // Snap to full reply in case of any missed words
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: data.reply };
+            return updated;
+          });
+          setTyping(false);
+        }
+      );
+
+    } catch (err) {
+      setLoading(false);
+      setTyping(false);
+      setError(err.message);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "I'm having a quick moment — please try again in a second! 🙏" },
+      ]);
     }
   };
 
-  return { messages, loading, error, isStarted, startChat, sendMessage, sessionId };
+  return {
+    messages, loading, typing, error, isStarted, startChat, sendMessage, sessionId,
+  };
 }

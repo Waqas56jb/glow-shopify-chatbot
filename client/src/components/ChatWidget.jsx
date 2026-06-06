@@ -40,7 +40,8 @@ function TypingDots() {
 
 export default function ChatWidget() {
   const [input, setInput] = useState("");
-  const { messages, loading, error, isStarted, startChat, sendMessage } = useChat();
+  const { messages, loading, typing, error, isStarted, startChat, sendMessage } = useChat();
+  const isBusy = loading || typing;
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -49,7 +50,7 @@ export default function ChatWidget() {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [messages, loading]);
+  }, [messages, loading, typing]);
 
   /* iOS: scroll input into view when keyboard opens */
   const handleInputFocus = () => {
@@ -62,14 +63,14 @@ export default function ChatWidget() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || isBusy) return;
     sendMessage(input.trim());
     setInput("");
     inputRef.current?.focus();
   };
 
   const handleQuickReply = (text) => {
-    if (loading) return;
+    if (isBusy) return;
     sendMessage(text);
   };
 
@@ -104,10 +105,9 @@ export default function ChatWidget() {
       <div className="chat-body">
         <div className="chat-messages">
           {messages.map((msg, index) => {
+            // Hide the empty bubble while it's being typed into
             const isLast = index === messages.length - 1;
-            // While streaming, the last assistant bubble starts empty — skip it
-            // and let the TypingDots below take its place until first token arrives
-            if (msg.role === "assistant" && msg.content === "" && loading && isLast) return null;
+            if (msg.role === "assistant" && msg.content === "" && isLast) return null;
 
             return (
               <div
@@ -128,19 +128,15 @@ export default function ChatWidget() {
             );
           })}
 
-          {/* Show typing dots only while waiting for the first streaming token */}
-          {loading && (() => {
-            const last = messages[messages.length - 1];
-            const awaitingFirstToken = !last || last.role !== "assistant" || last.content === "";
-            return awaitingFirstToken ? (
-              <div className="chat-message-row assistant">
-                <BotAvatar />
-                <div className="chat-bubble assistant typing">
-                  <TypingDots />
-                </div>
+          {/* Typing dots: show while fetching OR at very start of word animation */}
+          {loading && (
+            <div className="chat-message-row assistant">
+              <BotAvatar />
+              <div className="chat-bubble assistant typing">
+                <TypingDots />
               </div>
-            ) : null;
-          })()}
+            </div>
+          )}
 
           {error && (
             <div className="chat-message-row assistant">
@@ -180,15 +176,15 @@ export default function ChatWidget() {
             onChange={(e) => setInput(e.target.value)}
             onFocus={handleInputFocus}
             placeholder="Write your message..."
-            disabled={loading}
-            autoComplete="off"
+          disabled={isBusy}
+          autoComplete="off"
             autoCorrect="off"
             autoCapitalize="sentences"
           />
           <button
             type="submit"
             className="chat-send-btn"
-            disabled={loading || !input.trim()}
+            disabled={isBusy || !input.trim()}
             aria-label="Send message"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
