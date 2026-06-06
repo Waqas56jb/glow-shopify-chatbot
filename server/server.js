@@ -18,6 +18,7 @@ app.use("/api/leads",         require("./routes/leads"));
 app.use("/api/conversations", require("./routes/conversations"));
 app.use("/api/stats",         require("./routes/stats"));
 app.use("/api/products",      require("./routes/products"));
+app.use("/api/settings",      require("./routes/settings"));
 
 // ── Health ────────────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => {

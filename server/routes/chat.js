@@ -5,12 +5,21 @@ const supabase  = require("../db");
 const { buildSystemPrompt } = require("../prompt");
 const { getProducts }       = require("../cache/productCache");
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 const MODEL        = "gpt-4o-mini";
-const MAX_TOKENS   = 400;   // short = fast
+const MAX_TOKENS   = 400;
 const TEMPERATURE  = 0.7;
 const MEMORY_LIMIT = 6;
+
+// Resolve OpenAI key: env var → DB fallback
+async function getOpenAIKey() {
+  if (process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY;
+  try {
+    const { data } = await supabase
+      .from("settings").select("openai_api_key").eq("id", "global").single();
+    if (data?.openai_api_key) return data.openai_api_key;
+  } catch {}
+  return null;
+}
 
 // ── DB context (parallel-fetched, non-fatal) ─────────────────────────────
 async function fetchDbContext(session_id, customer_name, customer_email) {
@@ -67,9 +76,11 @@ router.post("/", async (req, res) => {
   if (!message || !session_id) {
     return res.status(400).json({ error: "message and session_id are required" });
   }
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: "OPENAI_API_KEY not configured" });
+  const apiKey = await getOpenAIKey();
+  if (!apiKey) {
+    return res.status(500).json({ error: "OpenAI API key not configured. Set it in Settings or Vercel env vars." });
   }
+  const openai = new OpenAI({ apiKey });
 
   // Fetch DB context + product cache in parallel
   const [{ convId, prevCount, history, dbOk }, products] = await Promise.all([

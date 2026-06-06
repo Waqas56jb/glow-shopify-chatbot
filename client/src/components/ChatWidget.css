@@ -15,6 +15,14 @@
   --color-error-text: #c0392b;
   --color-error-border: #f5c6c6;
 
+  /* Dynamic theme vars (set by App.jsx from admin settings) */
+  --chat-primary:    #d4af37;
+  --chat-bg:         #f5f0eb;
+  --chat-user-bubble:#1a1a1a;
+  --chat-bot-bubble: #ffffff;
+  --chat-send-btn:   #c9a84c;
+  --chat-header-bg:  #1a1a1a;
+
   --radius-xl: 32px;
   --radius-lg: 20px;
   --radius-pill: 999px;
@@ -35,7 +43,7 @@
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-cream);
+  background: var(--chat-bg, var(--color-cream));
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-widget);
@@ -54,7 +62,7 @@
   justify-content: space-between;
   padding: 0 20px;
   border-bottom: 1px solid rgba(212, 175, 55, 0.12);
-  background: var(--color-cream);
+  background: var(--chat-header-bg, var(--color-cream));
   z-index: 10;
 }
 
@@ -120,7 +128,7 @@
   font-family: "Playfair Display", Georgia, serif;
   font-size: 16px;
   font-weight: 700;
-  color: var(--color-black);
+  color: #fff;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -320,7 +328,7 @@
 }
 
 .chat-bubble.assistant {
-  background: var(--color-white);
+  background: var(--chat-bot-bubble, var(--color-white));
   color: var(--color-text);
   border: 1px solid rgba(212, 175, 55, 0.2);
   box-shadow: var(--shadow-soft);
@@ -328,7 +336,7 @@
 }
 
 .chat-bubble.user {
-  background: var(--color-black);
+  background: var(--chat-user-bubble, var(--color-black));
   color: var(--color-white);
   border-bottom-right-radius: 4px;
 }
@@ -531,7 +539,7 @@
   width: 42px;
   height: 42px;
   flex-shrink: 0;
-  background: var(--color-gold);
+  background: var(--chat-send-btn, var(--color-gold));
   border: none;
   border-radius: 50%;
   display: flex;
@@ -545,7 +553,7 @@
 }
 
 .chat-send-btn:hover:not(:disabled) {
-  background: var(--color-gold-light);
+  filter: brightness(1.15);
   transform: scale(1.06);
 }
 
