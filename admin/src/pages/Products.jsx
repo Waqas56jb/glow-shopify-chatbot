@@ -69,25 +69,45 @@ export default function Products() {
   const closeDrawer = () => { setDrawerOpen(false); setEditTarget(null); };
 
   /* ── Image upload to Supabase Storage ── */
+  const BUCKET = "product-images";
+
+  const ensureBucket = async () => {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const exists = buckets?.some((b) => b.name === BUCKET);
+    if (!exists) {
+      const { error } = await supabase.storage.createBucket(BUCKET, { public: true });
+      if (error && !error.message.includes("already exists")) throw error;
+    }
+  };
+
   const uploadImage = async (file, slot) => {
     setUploading((u) => ({ ...u, [slot]: true }));
     try {
-      const ext  = file.name.split(".").pop();
-      const path = `products/${Date.now()}-${slot}.${ext}`;
+      await ensureBucket();
+      const ext  = file.name.split(".").pop().toLowerCase();
+      const path = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { data, error: upErr } = await supabase.storage
-        .from("product-images")
+        .from(BUCKET)
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
-      const { data: { publicUrl } } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(data.path);
+      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
       setForm((f) => {
         const imgs = [...f.images];
         imgs[slot] = publicUrl;
         return { ...f, images: imgs };
       });
     } catch (e) {
-      alert("Image upload failed: " + e.message);
+      if (e.message?.includes("Bucket not found") || e.message?.includes("bucket")) {
+        alert(
+          "Storage bucket missing.\n\n" +
+          "Go to Supabase → Storage → New Bucket\n" +
+          "Name: product-images\n" +
+          "Make it PUBLIC ✓\n\n" +
+          "Then try uploading again."
+        );
+      } else {
+        alert("Upload failed: " + e.message);
+      }
     } finally {
       setUploading((u) => ({ ...u, [slot]: false }));
     }

@@ -244,26 +244,42 @@
 .iconGrid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  gap: 10px;
   padding: 16px 18px;
 }
 .iconBtn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 8px;
+  gap: 7px;
+  padding: 10px 6px;
   background: var(--surface2);
   border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   cursor: pointer;
-  transition: border-color .15s, background .15s;
+  transition: border-color .15s, transform .12s, box-shadow .15s;
 }
-.iconBtn:hover { border-color: var(--gold); background: var(--surface3); }
-.iconBtnActive { border-color: var(--gold) !important; background: var(--gold-dim) !important; }
-.iconSvg { width: 28px; height: 28px; color: var(--text); }
-.iconBtnActive .iconSvg { color: var(--gold); }
-.iconLabel { font-size: 10px; color: var(--text-muted); text-align: center; line-height: 1.2; }
+.iconBtn:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.iconBtnActive {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px rgba(212,175,55,.25) !important;
+}
+.iconEmoji {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
+  transition: background .15s;
+}
+.iconLabel { font-size: 10.5px; color: var(--text-muted); text-align: center; line-height: 1.2; font-weight: 500; }
 
 /* ── Footer ── */
 .footer {

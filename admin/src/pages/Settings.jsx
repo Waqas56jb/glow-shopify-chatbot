@@ -2,23 +2,23 @@ import { useState, useEffect } from "react";
 import { apiFetch } from "../hooks/useApi";
 import styles from "./Settings.module.css";
 
-/* ── Widget Icon definitions ─────────────────────────────────────────── */
+/* ── Widget Icon definitions (emoji-based, high quality on all devices) ── */
 const WIDGET_ICONS = [
-  { id: "bubble",   label: "Chat Bubble",  svg: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/> },
-  { id: "sparkle",  label: "Sparkle",      svg: <><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></> },
-  { id: "bag",      label: "Shopping Bag", svg: <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></> },
-  { id: "heart",    label: "Heart",        svg: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/> },
-  { id: "star",     label: "Star",         svg: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/> },
-  { id: "diamond",  label: "Diamond",      svg: <><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></> },
-  { id: "crown",    label: "Crown",        svg: <path d="M2 20h20M5 20V8l7-6 7 6v12"/> },
-  { id: "gift",     label: "Gift",         svg: <><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></> },
-  { id: "wand",     label: "Magic Wand",   svg: <><path d="m15 4-1 1"/><path d="m12 7 1-1"/><path d="M9 4l1 1"/><path d="m4 9 1 1"/><path d="m7 12-1 1"/><path d="M4 15l1-1"/><line x1="5" y1="19" x2="19" y2="5"/><path d="m19 9 1 1"/><path d="m15 20 1-1"/><path d="m20 15-1 1"/></> },
-  { id: "message",  label: "Message",      svg: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></> },
-  { id: "flower",   label: "Flower",       svg: <><circle cx="12" cy="12" r="3"/><path d="M12 2a4 4 0 0 1 4 4 4 4 0 0 1 4 4 4 4 0 0 1-4 4 4 4 0 0 1-4 4 4 4 0 0 1-4-4 4 4 0 0 1-4-4 4 4 0 0 1 4-4 4 4 0 0 1 4-4z"/></> },
-  { id: "lightning",label: "Lightning",    svg: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/> },
-  { id: "handbag",  label: "Handbag",      svg: <><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M8 2a4 4 0 0 1 8 0"/></> },
-  { id: "scissors", label: "Scissors",     svg: <><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></> },
-  { id: "dress",    label: "Fashion",      svg: <><path d="M9 2h6l2 5-5 3-5-3z"/><path d="M7 7l-5 15h20L17 7"/></> },
+  { id: "robot",    label: "AI Robot",     emoji: "🤖", bg: "#e8f4fd" },
+  { id: "bubble",   label: "Chat",         emoji: "💬", bg: "#e8f5e9" },
+  { id: "sparkle",  label: "Magic",        emoji: "✨", bg: "#fff8e1" },
+  { id: "bag",      label: "Shopping",     emoji: "🛍️", bg: "#fce4ec" },
+  { id: "diamond",  label: "Diamond",      emoji: "💎", bg: "#e3f2fd" },
+  { id: "crown",    label: "Crown",        emoji: "👑", bg: "#fff3e0" },
+  { id: "heart",    label: "Heart",        emoji: "❤️", bg: "#fce4ec" },
+  { id: "star",     label: "Star",         emoji: "⭐", bg: "#fffde7" },
+  { id: "flower",   label: "Blossom",      emoji: "🌸", bg: "#fce4ec" },
+  { id: "lipstick", label: "Beauty",       emoji: "💄", bg: "#fce4ec" },
+  { id: "dress",    label: "Fashion",      emoji: "👗", bg: "#f3e5f5" },
+  { id: "lightning",label: "Lightning",    emoji: "⚡", bg: "#fffde7" },
+  { id: "gift",     label: "Gift",         emoji: "🎁", bg: "#e8f5e9" },
+  { id: "crystal",  label: "Crystal",      emoji: "🔮", bg: "#ede7f6" },
+  { id: "wand",     label: "Magic Wand",   emoji: "🪄", bg: "#e8eaf6" },
 ];
 
 const COLOR_PRESETS = [
@@ -259,17 +259,19 @@ export default function Settings() {
       <Section title="💬 Widget Button Icon">
         <p className={styles.hint} style={{ padding: "10px 18px 4px" }}>Select the icon shown on the floating chat button in Shopify.</p>
         <div className={styles.iconGrid}>
-          {WIDGET_ICONS.map(({ id, label, svg }) => (
+          {WIDGET_ICONS.map(({ id, label, emoji, bg }) => (
             <button
               key={id} type="button"
               className={`${styles.iconBtn} ${icon === id ? styles.iconBtnActive : ""}`}
               onClick={() => setIcon(id)}
               title={label}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-                strokeLinecap="round" strokeLinejoin="round" className={styles.iconSvg}>
-                {svg}
-              </svg>
+              <span
+                className={styles.iconEmoji}
+                style={{ background: icon === id ? "rgba(212,175,55,0.18)" : bg }}
+              >
+                {emoji}
+              </span>
               <span className={styles.iconLabel}>{label}</span>
             </button>
           ))}
