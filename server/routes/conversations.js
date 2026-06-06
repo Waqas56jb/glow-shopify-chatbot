@@ -84,4 +84,21 @@ router.get("/orders/all", adminAuth, async (req, res) => {
   }
 });
 
+// PATCH /api/conversations/orders/:id  — update order inquiry status
+router.patch("/orders/:id", adminAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const { data, error } = await supabase
+      .from("order_inquiries")
+      .update({ inquiry_status: status })
+      .eq("id", req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ order: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

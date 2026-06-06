@@ -4,6 +4,7 @@ import Layout from "./components/Layout/Layout";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import Products from "./pages/Products";
 import Leads from "./pages/Leads";
 import Conversations from "./pages/Conversations";
 import Orders from "./pages/Orders";
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard"     element={<Dashboard />} />
+            <Route path="products"      element={<Products />} />
             <Route path="leads"         element={<Leads />} />
             <Route path="conversations" element={<Conversations />} />
             <Route path="orders"        element={<Orders />} />
