@@ -103,9 +103,9 @@ router.get("/", adminAuth, async (req, res) => {
 
     const { data, error } = await query;
     if (error) throw error;
-    res.json({ leads: data });
+    res.json({ leads: data || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({ leads: [], _warning: err.message });
   }
 });
 

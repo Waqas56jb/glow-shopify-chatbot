@@ -24,9 +24,9 @@ router.get("/", adminAuth, async (req, res) => {
 
     const { data, error } = await query;
     if (error) throw error;
-    res.json({ conversations: data });
+    res.json({ conversations: data || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({ conversations: [], _warning: err.message });
   }
 });
 
@@ -78,9 +78,9 @@ router.get("/orders/all", adminAuth, async (req, res) => {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) throw error;
-    res.json({ orders: data });
+    res.json({ orders: data || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({ orders: [], _warning: err.message });
   }
 });
 

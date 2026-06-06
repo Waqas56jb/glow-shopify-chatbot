@@ -62,7 +62,17 @@ router.get("/", adminAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("Stats error:", err.message);
-    res.status(500).json({ error: err.message });
+    // Return zeroed stats so admin dashboard renders even when DB is down
+    res.json({
+      stats: {
+        totalLeads: 0, newLeadsToday: 0, totalConversations: 0,
+        activeConversations: 0, totalOrders: 0, pendingOrders: 0,
+        totalMessages: 0, conversionRate: "0%",
+      },
+      recentLeads: [],
+      recentConversations: [],
+      _warning: err.message,
+    });
   }
 });
 

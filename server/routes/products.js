@@ -1,27 +1,37 @@
-const express = require("express");
-const router  = express.Router();
-const supabase = require("../db");
+const express   = require("express");
+const router    = express.Router();
+const supabase  = require("../db");
 const adminAuth = require("../middleware/adminAuth");
 const { invalidateCache } = require("../cache/productCache");
 
-// GET /api/products  — public (used by chatbot dynamically)
+// GET /api/products  — public (chatbot) + admin
+// Query params:
+//   in_stock=true   → only in-stock  (default for chatbot)
+//   in_stock=false  → ALL products   (admin wants everything)
+//   featured=true   → only featured
+//   limit=N         → max rows (default 100)
 router.get("/", async (req, res) => {
   try {
-    const { featured, in_stock = "true", limit = 100 } = req.query;
+    const { featured, in_stock, limit = 100 } = req.query;
+
     let query = supabase
       .from("products")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(parseInt(limit));
 
+    // Only filter by in_stock when explicitly set to "true"
+    // in_stock=false or omitted → return all (admin) or all (no filter)
     if (in_stock === "true") query = query.eq("in_stock", true);
-    if (featured  === "true") query = query.eq("featured", true);
+    if (featured === "true") query = query.eq("featured", true);
 
     const { data, error } = await query;
     if (error) throw error;
-    res.json({ products: data });
+    res.json({ products: data || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("GET /api/products error:", err.message);
+    // Return 200 + empty array so admin UI loads even when DB is misconfigured
+    res.json({ products: [], _warning: err.message });
   }
 });
 
@@ -37,7 +47,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ── Admin: require auth ────────────────────────────────────────────────────
+// ── Admin routes (require auth) ───────────────────────────────────────────
 
 // POST /api/products
 router.post("/", adminAuth, async (req, res) => {
@@ -82,11 +92,12 @@ router.delete("/:id", adminAuth, async (req, res) => {
 // PATCH /api/products/:id/toggle  — quick toggle in_stock / featured
 router.patch("/:id/toggle", adminAuth, async (req, res) => {
   try {
-    const { field } = req.body; // "in_stock" or "featured"
+    const { field } = req.body;
     if (!["in_stock", "featured"].includes(field)) {
       return res.status(400).json({ error: "field must be in_stock or featured" });
     }
-    const { data: cur } = await supabase.from("products").select(field).eq("id", req.params.id).single();
+    const { data: cur } = await supabase
+      .from("products").select(field).eq("id", req.params.id).single();
     const { data, error } = await supabase
       .from("products")
       .update({ [field]: !cur[field], updated_at: new Date().toISOString() })
