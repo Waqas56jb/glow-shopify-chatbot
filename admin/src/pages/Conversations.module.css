@@ -1,0 +1,202 @@
+.page {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  height: calc(100vh - var(--header-h) - 48px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+/* List panel */
+.listPanel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.listHeader {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listTitle {
+  font-family: "Playfair Display", serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.searchWrap { display: flex; }
+
+.search {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--text);
+  outline: none;
+}
+.search::placeholder { color: var(--text-dim); }
+.search:focus { border-color: var(--border-strong); }
+
+.list { flex: 1; overflow-y: auto; }
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+  position: relative;
+}
+.listItem:hover { background: var(--surface2); }
+.listItemActive { background: var(--gold-dim); }
+
+.listAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface3);
+  border: 1.5px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Playfair Display", serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.listMeta { flex: 1; min-width: 0; }
+.listTop  { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+.listName { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.listTime { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
+.listPreview { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.statusDot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* Chat panel */
+.chatPanel {
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.chatHeaderAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--black);
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Playfair Display", serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.chatHeaderName  { font-size: 14px; font-weight: 600; color: var(--text); }
+.chatHeaderEmail { font-size: 12px; color: var(--text-muted); }
+
+.statusBadge {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.msgRow { display: flex; gap: 8px; align-items: flex-end; }
+.msgUser { flex-direction: row-reverse; }
+
+.botAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--black);
+  border: 1.5px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Playfair Display", serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.bubble {
+  max-width: 72%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.bubbleBot {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.bubbleUser {
+  background: var(--gold);
+  color: var(--black);
+  font-weight: 500;
+  border-bottom-right-radius: 4px;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .page {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - var(--header-h) - 48px);
+  }
+  .listPanel { max-height: 320px; }
+  .chatPanel { min-height: 400px; }
+}
