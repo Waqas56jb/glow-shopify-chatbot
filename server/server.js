@@ -13,7 +13,10 @@ const SYSTEM_PROMPT = buildSystemPrompt();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || "*",
+  methods: ["GET", "POST"],
+}));
 app.use(express.json());
 
 const openai = new OpenAI({
