@@ -103,32 +103,44 @@ export default function ChatWidget() {
 
       <div className="chat-body">
         <div className="chat-messages">
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`chat-message-row ${msg.role === "assistant" ? "assistant" : "user"}`}
-            >
-              {msg.role === "assistant" && <BotAvatar />}
-              <div className={`chat-bubble ${msg.role}`}>
-                {msg.role === "assistant" ? (
-                  <div className="md">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
-                ) : (
-                  msg.content
-                )}
-              </div>
-            </div>
-          ))}
+          {messages.map((msg, index) => {
+            const isLast = index === messages.length - 1;
+            // While streaming, the last assistant bubble starts empty — skip it
+            // and let the TypingDots below take its place until first token arrives
+            if (msg.role === "assistant" && msg.content === "" && loading && isLast) return null;
 
-          {loading && (
-            <div className="chat-message-row assistant">
-              <BotAvatar />
-              <div className="chat-bubble assistant typing">
-                <TypingDots />
+            return (
+              <div
+                key={index}
+                className={`chat-message-row ${msg.role === "assistant" ? "assistant" : "user"}`}
+              >
+                {msg.role === "assistant" && <BotAvatar />}
+                <div className={`chat-bubble ${msg.role}`}>
+                  {msg.role === "assistant" ? (
+                    <div className="md">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
+
+          {/* Show typing dots only while waiting for the first streaming token */}
+          {loading && (() => {
+            const last = messages[messages.length - 1];
+            const awaitingFirstToken = !last || last.role !== "assistant" || last.content === "";
+            return awaitingFirstToken ? (
+              <div className="chat-message-row assistant">
+                <BotAvatar />
+                <div className="chat-bubble assistant typing">
+                  <TypingDots />
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           {error && (
             <div className="chat-message-row assistant">
