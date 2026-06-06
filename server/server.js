@@ -6,11 +6,31 @@ const supabase = require("./db"); // initialises & validates env vars
 
 const app = express();
 
-app.use(cors({
-  origin:  process.env.ALLOWED_ORIGIN || "*",
-  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+// Support comma-separated list of allowed origins
+// e.g. ALLOWED_ORIGIN=https://client.vercel.app,https://admin.vercel.app
+const RAW_ORIGINS = process.env.ALLOWED_ORIGIN || "";
+const ALLOWED_ORIGINS = RAW_ORIGINS
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow curl / Postman / server-to-server (no origin header)
+      if (!origin) return callback(null, true);
+      // Allow all if no whitelist configured
+      if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes("*"))
+        return callback(null, true);
+      // Allow whitelisted origins
+      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      callback(new Error("CORS: origin not allowed — " + origin));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // ── Routes ────────────────────────────────────────────────────────────────
