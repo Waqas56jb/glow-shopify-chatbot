@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 const { buildSystemPrompt } = require("./prompt");
+const supabase = require("./db");
 
 const PORT = 5000;
 const MODEL = "gpt-4o-mini";
@@ -24,7 +25,7 @@ const openai = new OpenAI({
 });
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", db: "supabase connected" });
 });
 
 app.post("/api/chat", async (req, res) => {
