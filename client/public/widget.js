@@ -37,7 +37,7 @@
     var style = document.createElement("style");
     style.textContent = [
       "#" + BTN_ID + " {",
-      "  position:fixed; bottom:24px; right:24px; z-index:999998;",
+      "  position:fixed; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); right:24px; z-index:2147483646;",
       "  width:64px; height:64px; border-radius:50%;",
       "  background:" + headerBg + ";",
       "  border:2.5px solid " + primary + ";",
@@ -59,9 +59,9 @@
       "}",
 
       "#" + WIDGET_ID + " {",
-      "  position:fixed; bottom:100px; right:24px; z-index:999999;",
-      "  width:400px; height:680px;",
-      "  max-width:calc(100vw - 32px); max-height:calc(100dvh - 120px);",
+      "  position:fixed; bottom:calc(100px + env(safe-area-inset-bottom, 0px)); right:24px; z-index:2147483647;",
+      "  width:400px; height:640px;",
+      "  max-width:calc(100vw - 32px); max-height:calc(100dvh - 130px);",
       "  border-radius:24px; overflow:hidden;",
       "  box-shadow:0 20px 60px rgba(0,0,0,.45);",
       "  border:1px solid " + primary + "33;",
@@ -74,8 +74,8 @@
       "#" + WIDGET_ID + " iframe { width:100%; height:100%; border:none; display:block; }",
 
       "@media (max-width:480px) {",
-      "  #" + WIDGET_ID + " { bottom:0; right:0; left:0; width:100%; max-width:100%; height:90dvh; max-height:90dvh; border-radius:20px 20px 0 0; transform-origin:bottom center; }",
-      "  #" + BTN_ID + " { bottom:20px; right:20px; }",
+      "  #" + WIDGET_ID + " { bottom:0; right:0; left:0; width:100%; max-width:100%; height:92dvh; max-height:92dvh; border-radius:22px 22px 0 0; transform-origin:bottom center; }",
+      "  #" + BTN_ID + " { bottom:calc(84px + env(safe-area-inset-bottom, 0px)); right:18px; width:60px; height:60px; font-size:26px; }",
       "}",
     ].join("\n");
     document.head.appendChild(style);
@@ -131,6 +131,11 @@
 
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && isOpen) closeWidget();
+    });
+
+    /* Close when the chat (inside the iframe) asks to be dismissed */
+    window.addEventListener("message", function (e) {
+      if (e && e.data && e.data.type === "glowup:close") closeWidget();
     });
 
     document.body.appendChild(container);

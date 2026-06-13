@@ -4,6 +4,31 @@ import { quickReplies, welcomeScreen, storeInfo } from "../data";
 import { useChat } from "../hooks/useChat";
 import "./ChatWidget.css";
 
+/* Tell the parent page (widget.js) to close the chat panel */
+function closeChat() {
+  try {
+    window.parent.postMessage({ type: "glowup:close" }, "*");
+  } catch {
+    /* not embedded — nothing to close */
+  }
+}
+
+function CloseButton() {
+  return (
+    <button
+      type="button"
+      className="chat-close-btn"
+      onClick={closeChat}
+      aria-label="Close chat"
+      title="Close chat"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  );
+}
+
 function ChatHeader() {
   return (
     <header className="chat-header">
@@ -14,10 +39,16 @@ function ChatHeader() {
         </div>
         <div className="chat-header-info">
           <h1 className="chat-brand-name">{storeInfo.name}</h1>
-          <p className="chat-brand-status">STYLIST · ONLINE</p>
+          <p className="chat-brand-status">
+            <span className="chat-status-pip" />
+            Stylist · Online
+          </p>
         </div>
       </div>
-      <span className="chat-confidential">PRIVATE</span>
+      <div className="chat-header-right">
+        <span className="chat-confidential">PRIVATE</span>
+        <CloseButton />
+      </div>
     </header>
   );
 }
@@ -93,6 +124,11 @@ export default function ChatWidget({ widgetIcon, firstMessage }) {
             {welcomeScreen.startButton}
           </button>
         </div>
+        <footer className="chat-welcome-footer">
+          <p className="chat-powered">
+            Powered by {storeInfo.name} · AI Stylist available 24/7
+          </p>
+        </footer>
       </div>
     );
   }
@@ -159,7 +195,7 @@ export default function ChatWidget({ widgetIcon, firstMessage }) {
                 disabled={loading}
               >
                 <span className="quick-reply-icon">{reply.icon}</span>
-                {reply.text}
+                <span className="quick-reply-text">{reply.text}</span>
               </button>
             ))}
           </div>
@@ -176,8 +212,8 @@ export default function ChatWidget({ widgetIcon, firstMessage }) {
             onChange={(e) => setInput(e.target.value)}
             onFocus={handleInputFocus}
             placeholder="Write your message..."
-          disabled={isBusy}
-          autoComplete="off"
+            disabled={isBusy}
+            autoComplete="off"
             autoCorrect="off"
             autoCapitalize="sentences"
           />
